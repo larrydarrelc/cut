@@ -1,5 +1,6 @@
 #coding: utf-8
 
+import gobject
 import gtk
 import pygtk
 pygtk.require('2.0')
@@ -38,7 +39,6 @@ class CutManager(object):
             ('expose-event', self.on_expose),
             ('button-press-event', self.on_button_press),
             ('button-release-event', self.on_button_release),
-            ('button-release-event', self.on_destroy),
             ('motion-notify-event', self.on_motion_notify),
             ('key-press-event', self.on_key_press)
         )
@@ -100,8 +100,11 @@ class CutManager(object):
 
     def on_button_release(self, widget, event):
         '''Handle mouse button release event.'''
+        # let root window handle this event
         self.root.on_button_release(widget, event)
 
+        # capture the selected region
+        # TODO split it out
         captured = self.root.status.capture
         pixbuf = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, False, 8,
                                 captured.width, captured.height)
@@ -110,6 +113,10 @@ class CutManager(object):
                                           captured.x, captured.y, 0, 0,
                                           captured.width, captured.height)
         self.save(pixbuf)
+        self.root.undraw()
+        # FIXME quick fix to make the copied data persistable
+        # ref: https://wiki.ubuntu.com/ClipboardPersistence
+        gobject.timeout_add_seconds(15, self.on_destroy, widget, event)
 
     def on_motion_notify(self, widget, event):
         '''Handle mouse button move event.'''

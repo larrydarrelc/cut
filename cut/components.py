@@ -68,6 +68,9 @@ class RootWindow(_Component):
     def draw(self):
         self.window.show_all()
 
+    def undraw(self):
+        self.window.hide_all()
+
     def on_expose(self, widget, event):
         '''Handle the `expose` event.'''
         cr = self.window.window.cairo_create()
