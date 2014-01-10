@@ -49,7 +49,10 @@ class RootWindow(_Component):
             'height': 0,
             'dragging': False,
             # capture region
-            'capture': {'x': 0, 'y': 0, 'width': 0, 'height': 0},
+            'capture': {
+                'start': {'x': 0, 'y': 0},
+                'end': {'x': 0, 'y': 0}
+            }
         })
 
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
@@ -79,34 +82,40 @@ class RootWindow(_Component):
         drawers.draw_pixbuf(cr, self.desktop)
 
         # draw a transparent mask
-        drawers.draw_mask(cr, 0, 0, self.status.width, self.status.height)
+
+        # calculate the mask
+        # TODO split it out
+        start = self.status.capture.start
+        end = self.status.capture.end
+        sx, sy = min(start.x, end.x), min(start.y, end.y)
+        width, height = abs(start.x - end.x), abs(start.y - end.y)
+        hollow = (sx, sy, width, height)
+        rect = (0, 0, self.status.width, self.status.height)
+
+        drawers.draw_hollow_mask(cr, rect, hollow)
 
     def on_button_press(self, widget, event):
         '''Handle mouse press event.'''
         self.status.dragging = True
-        capture = self.status.capture
+
+        # get first drag point
+        capture = self.status.capture.start
         capture.x, capture.y = utils.get_coordinate_from_event(event)
 
     def on_button_release(self, widget, event):
         '''Handle mouse release event.'''
 
         if self.status.dragging:
-            # Calculate the rectangle. Since each edge is
-            # parallel to the monitor, so it's easily find
-            # out that the start point is the smaller coordinate
-            # value of x and y. For example:
-            #
-            #     (x0, y0)          (x0 + width, y0)
-            #       +------------------+
-            #       |                  |
-            #       |                  |
-            #       |                  |
-            #       +------------------+
-            #     (x0, y0 + height)  (x0 + width, y0 + height)
-            capture = self.status.capture
-            sx, sy = capture.x, capture.y
-            ex, ey = utils.get_coordinate_from_event(event)
-            capture.x, capture.y = min(ex, sx), min(ey, sy)
-            capture.width, capture.height = abs(ex - sx), abs(ey - sy)
+            end = self.status.capture.end
+            end.x, end.y = utils.get_coordinate_from_event(event)
 
         self.status.dragging = False
+
+    def on_motion_notify(self, widget, event):
+        '''Handle mouse move event.'''
+        if self.status.dragging:
+            # track mouse's trace
+            end = self.status.capture.end
+            end.x, end.y = utils.get_coordinate_from_event(event)
+
+            self.window.queue_draw()

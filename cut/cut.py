@@ -105,13 +105,15 @@ class CutManager(object):
 
         # capture the selected region
         # TODO split it out
-        captured = self.root.status.capture
+        start = self.root.status.capture.start
+        end = self.root.status.capture.end
+        width, height = abs(start.x - end.x), abs(start.y - end.y)
         pixbuf = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, False, 8,
-                                captured.width, captured.height)
+                                width, height)
         region = self.root.window.get_window()
         pixbuf = pixbuf.get_from_drawable(region, region.get_colormap(),
-                                          captured.x, captured.y, 0, 0,
-                                          captured.width, captured.height)
+                                          start.x, start.y, 0, 0,
+                                          width, height)
         self.save(pixbuf)
         self.root.undraw()
         # FIXME quick fix to make the copied data persistable
@@ -120,6 +122,7 @@ class CutManager(object):
 
     def on_motion_notify(self, widget, event):
         '''Handle mouse button move event.'''
+        self.root.on_motion_notify(widget, event)
 
 
 if __name__ == '__main__':
