@@ -76,8 +76,7 @@ class RootWindow(_Component):
         drawers.draw_pixbuf(cr, self.desktop)
 
         # draw a transparent mask
-        drawers.draw_mask(cr, 0, 0, self.status.width, self.status.height,
-                          (0, 0, 0, 0))
+        drawers.draw_mask(cr, 0, 0, self.status.width, self.status.height)
 
     def on_button_press(self, widget, event):
         '''Handle mouse press event.'''
