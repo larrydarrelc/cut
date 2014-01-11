@@ -104,18 +104,11 @@ class CutManager(object):
         self.root.on_button_release(widget, event)
 
         # capture the selected region
-        # TODO split it out
-        start = self.root.status.capture.start
-        end = self.root.status.capture.end
-        width, height = abs(start.x - end.x), abs(start.y - end.y)
-        pixbuf = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, False, 8,
-                                width, height)
-        region = self.root.window.get_window()
-        pixbuf = pixbuf.get_from_drawable(region, region.get_colormap(),
-                                          start.x, start.y, 0, 0,
-                                          width, height)
-        self.save(pixbuf)
+        desktop = self.root.desktop
+        captured = desktop.capture(*self.root.captured)
+        self.save(captured)
         self.root.undraw()
+
         # FIXME quick fix to make the copied data persistable
         # ref: https://wiki.ubuntu.com/ClipboardPersistence
         gobject.timeout_add_seconds(15, self.on_destroy, widget, event)
