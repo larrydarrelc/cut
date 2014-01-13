@@ -5,13 +5,14 @@ import gtk
 import pygtk
 pygtk.require('2.0')
 
+import signals
 import utils
-from components import RootWindow
+from components import RootWindow, FileChooser
 
 
 class CutManager(object):
     '''A screenshot helper.
-    
+
     ..attributes:
         root: a `:class:RootWindow` instance, root window
         keybindings: key press event callback pool
@@ -24,7 +25,7 @@ class CutManager(object):
 
     def _setup_events(self):
         '''Setup all events.
-        
+
         ..notes:
             All events should be handled by the manager itself.
         '''
@@ -34,6 +35,7 @@ class CutManager(object):
                        | gtk.gdk.BUTTON_RELEASE_MASK)
         self.root.window.add_events(events_mask)
 
+        # register events
         handlers = (
             ('destroy', self.on_destroy),
             ('expose-event', self.on_expose),
@@ -45,9 +47,18 @@ class CutManager(object):
         for name, handler in handlers:
             self.root.window.connect(name, handler)
 
+        # register custom signals
+        handlers = (
+            ('screenshot-save', self.on_save_screenshot),
+            ('screenshot-copy', self.on_copy_screenshot),
+            ('screenshot-discard', self.on_destroy)
+        )
+        for name, handler in handlers:
+            signals.register(name, handler)
+
     def _setup_keybindings(self):
         '''Setup keybindings.
-        
+
         ..notes:
             Each callback should register to `key_bindings` with k-v pair.
             Callback function must be a 0 argument callable object.
@@ -64,14 +75,26 @@ class CutManager(object):
         self.root.draw()
         gtk.main()
 
-    def save(self, pixbuf):
-        '''Save snapshot.
+    def save_to_clipboard(self, pixbuf):
+        '''Save screenshot to clipboard.
 
         :param pixbuf: a `:class:gtk.gdk.Pixbuf` drawable instance
         '''
         clipboard = gtk.clipboard_get()
         clipboard.set_image(pixbuf)
         clipboard.store()
+
+    def save_to_file(self, pixbuf, dest):
+        '''Save screenshot to file.
+
+        :param pixbuf: a `:class:gtk.gdk.Pixbuf` drawable instance
+        :param dest: save path
+        '''
+        pixbuf.save(dest, 'png')
+
+    def capture(self):
+        '''Capture selected region.'''
+        return self.root.desktop.capture(*self.root.captured)
 
     def on_destroy(self, widget, event=None):
         # restore cursor
@@ -103,20 +126,26 @@ class CutManager(object):
         # let root window handle this event
         self.root.on_button_release(widget, event)
 
-        # capture the selected region
-        desktop = self.root.desktop
-        captured = desktop.capture(*self.root.captured)
-        self.save(captured)
+    def on_motion_notify(self, widget, event):
+        '''Handle mouse button move event.'''
+        self.root.on_motion_notify(widget, event)
+
+    def on_copy_screenshot(self, event, widget):
+        captured = self.capture()
+        self.save_to_clipboard(captured)
         self.root.undraw()
 
         # FIXME quick fix to make the copied data persistable
         # ref: https://wiki.ubuntu.com/ClipboardPersistence
         gobject.timeout_add_seconds(15, self.on_destroy, widget, event)
 
-    def on_motion_notify(self, widget, event):
-        '''Handle mouse button move event.'''
-        self.root.on_motion_notify(widget, event)
+    def on_save_screenshot(self, event, widget):
+        captured = self.capture()
+        self.root.undraw()
 
-
-if __name__ == '__main__':
-    CutManager()
+        filechooser = FileChooser()
+        filechooser.setup(self.root)
+        dest = filechooser.draw()
+        if dest:
+            self.save_to_file(captured, dest)
+        self.on_destroy(widget, event)
