@@ -5,4 +5,4 @@ A simple screenshot helper for improving my life. [WIP]
 
 ## TODO
 
-- copy image to clipboard (maybe it's ok to switch to pyqt :/ :trollface:)
+- [x] copy image to clipboard (maybe it's ok to switch to pyqt :trollface:)
